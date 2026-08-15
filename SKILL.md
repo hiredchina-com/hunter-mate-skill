@@ -5,6 +5,10 @@ description: HiredChina 猎头 Agent 数据助手:通过 CLI 访问人才库、�
 
 # HunterMate Skill
 
+## 通用规则:自愈优先,不要把修复推给用户
+
+**任何 agent 使用 hunter-mate 时,发现 server 未运行 / 扩展未连接 / CLI 报错,必须先自动执行 `hunter-mate doctor`**,它会:原生模块 ABI 自检 → 自动启动 server → 自动安装扩展文件 → **检测到扩展未连接时自动打开扩展所在目录 + chrome://extensions 并打印加载引导**。agent 只需把引导转述给用户,不要让用户自己摸索。
+
 ## 触发词
 
 - `hunter-mate`
@@ -71,13 +75,16 @@ hunter-mate login
 ### 4. 检查扩展状态
 
 ```bash
-hunter-mate extension check
+hunter-mate doctor
 ```
 
-若扩展未连接,提示用户:
-1. 运行 `hunter-mate extension install` 打开扩展文件夹
-2. 在 Chrome 扩展管理页面加载 `chrome://extensions/` → 加载已解压的扩展程序
-3. 确认后再次 `hunter-mate extension check`
+doctor 是全链路自检 + 自愈:原生模块 ABI 检查 → server 自动启动 → 扩展文件自动安装 → 扩展 WebSocket 连通检查。
+
+**若扩展未连接,doctor 会自动打开扩展所在目录和 `chrome://extensions`,并打印中文加载引导(不要等用户叫才打开!)**。agent 把引导转述给用户:
+
+> Chrome 地址栏输入 `chrome://extensions/` → 开启右上角「开发者模式」→「加载已解压的扩展程序」→ 选择刚打开的扩展目录。
+
+用户确认加载后,再次 `hunter-mate extension check` 或 `hunter-mate doctor` 确认连接。
 
 ## 核心命令速查
 
@@ -184,6 +191,19 @@ hunter-mate update --apply  # 检测 + 应用: CLI 自更新(npm) + 一致性修
 - CLI 默认输出 Markdown 表格,便于 Agent 直接展示。
 - 使用 `--json` 获取结构化数据,便于 Agent 二次处理。
 - 使用 `--lang zh-CN` / `--lang en-US` 切换输出语言。
+
+## 排障路由(TROUBLESHOOTING)
+
+**agent 遇到任何 hunter-mate 报错,先在本表按症状定位,再执行对应修复;不要盲目重试。** 通用第一步:跑 `hunter-mate doctor`(含原生模块 ABI 自检、server/扩展自动修复与加载引导)。详细手册见 hunter-mate 仓库 `TROUBLESHOOTING.md`。
+
+| # | 症状 | 根因 | 修复 |
+|---|---|---|---|
+| 1 | doctor 报 `native_better-sqlite3: FAIL — ABI 不匹配` / server 启动即崩 | node 版本与原生模块(better-sqlite3)编译 ABI 不匹配(node 22=127/23=131/24=137/25=138/26=147) | ① 切回编译时版本的 node;② 或用当前 node 重编:`pnpm rebuild -r better-sqlite3`(**注意:pnpm 会用登录 shell PATH 里的 node 编译,未必是当前运行 CLI 的 node**)。重编后必须真验证:`node -e "new (require('better-sqlite3'))(':memory:').close()"`——仅 require 不触发 dlopen,是假验证 |
+| 2 | doctor 报 `server_auto_start: FAIL 自动启动超时` | server 崩溃(ABI/依赖/端口),后台 spawn 吞掉了报错 | `hunter-mate start -f` 前台看真实报错,按报错对号入座(ABI 错 → 条目 1) |
+| 3 | `extension_ws: FAIL` 扩展未连接 | 扩展未加载 / 未开启 | 跑 `hunter-mate doctor`(自动打开扩展目录 + chrome://extensions + 中文引导);按引导「加载已解压的扩展程序」,加载过只是断连则点「重新加载」 |
+| 4 | node 报 `EPERM` 写 `~/.hunter-mate/...`(macOS,间歇性) | 系统层拦截 node 写家目录(TCC/安全软件;换 node 来源无效,`/tmp` 不受影响) | 数据目录挪出 `~`:`export HUNTER_MATE_HOME=/tmp` 后重跑 doctor(CLI/扩展/日志全链路识别该变量) |
+| 5 | 端口被占 | 孤儿 server 进程 | `lsof -nP -iTCP:<port> -sTCP:LISTEN` 找 pid,kill 后 `hunter-mate start` |
+| 6 | CLI 命令超时/无响应 | server 未运行或扩展断连 | 自动 `hunter-mate doctor` 自愈,不要推给用户 |
 
 ## 边界与注意事项
 
