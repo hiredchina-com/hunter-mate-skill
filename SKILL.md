@@ -156,15 +156,20 @@ hunter-mate report weekly
 hunter-mate report sales <customer-id>
 ```
 
-### 更新
+### 版本与更新
 
-每次启动时建议检查更新:
+CLI **每次被使用时自动检测更新**,无需手动维护:
+
+- **CLI 自更新**:每次命令节流 1h 对比 npm registry,落后自动 `npm install -g hunter-mate@latest`,下一条命令起新版本生效(`HUNTER_MATE_NO_AUTOUPDATE=1` 可禁用)
+- **运行时一致性**:server 在跑时对比磁盘版本 vs 运行版本,插件不一致 → 自动 reload,server 不一致 → 自动重启,扩展不一致 → 自动 reload 广播(60s 节流)
+- **开发软链模式例外**:当 CLI 是 wrapper 指向 hc-hw `local/*/worktrees/hunter-mate/packages/cli/dist` 时,自动跳过 CLI 自更新(避免 npm 覆盖开发链),一致性 reload/restart 照常生效
+
+手动检查/应用更新:
 
 ```bash
-hunter-mate update
+hunter-mate update          # 仅检测 CLI/Server/Extension/ExtractionRule 新版本
+hunter-mate update --apply  # 检测 + 应用: CLI 自更新(npm) + 一致性修复(reload/重启)
 ```
-
-这会检测 CLI、Server、Extension 和 ExtractionRule 的新版本,并自动拉取。
 
 ## 输出格式约定
 
