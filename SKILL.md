@@ -36,15 +36,23 @@ hunter-mate --version
 
 ### 2. 安装 CLI
 
+前置:Node.js >= 20(含 npm)。
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/hiredchina-com/hunter-mate-skill/main/scripts/install.sh | bash
 ```
 
+或直接手动安装:
+
+```bash
+npm install -g hunter-mate@latest
+```
+
 安装脚本会:
-- 检测操作系统(macOS/Linux/Windows WSL)
-- 从 GitHub Release 下载对应二进制
-- 放置到 `~/.hunter-mate/bin/hunter-mate`
-- 可选加入 PATH
+- 检查 Node 版本(>= 20)
+- 通过 npm 安装 `hunter-mate@latest`
+- 检测旧二进制安装(`~/.hunter-mate/bin`,已停止分发)并提示迁移
+- 验证 `hunter-mate` 可执行
 
 ### 3. 检查登录状态
 
